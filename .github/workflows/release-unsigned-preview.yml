@@ -1,0 +1,82 @@
+name: Publish Unsigned Auto Update Build
+
+on:
+  workflow_dispatch:
+
+env:
+  NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    env:
+      CONFIGURATION_STRATEGY: Release
+      PUBLISH_PROFILE: Publish-PreviewRelease
+
+    steps:
+      - name: Ensure auto_update branch
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF_NAME -ne "auto_update") {
+            Write-Error "This workflow must be run from auto_update branch. Current: $env:GITHUB_REF_NAME"
+            exit 1
+          }
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Prepare environment variables
+        shell: pwsh
+        run: |
+          $envJson = Get-Content env.json | ConvertFrom-Json
+          foreach ($prop in $envJson.PSObject.Properties) {
+            echo "$($prop.Name)=$($prop.Value)" >> $env:GITHUB_ENV
+          }
+
+      - name: Install .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-quality: ${{ env.DOTNET_QUALITY }}
+          cache: true
+          cache-dependency-path: CollapseLauncher/packages.lock.json
+
+      - name: Build unsigned auto_update
+        shell: pwsh
+        run: |
+          dotnet workload update
+          dotnet publish CollapseLauncher `
+            -c $env:CONFIGURATION_STRATEGY `
+            -p:PublishProfile=$env:PUBLISH_PROFILE `
+            -p:PublishDir=".\build\" `
+            -p:PublishAot=false `
+            -p:RunAOTCompilation=false `
+            -p:SentryUploadSymbols=false `
+            -p:SentryUploadSources=false
+
+      - name: Prepare artifact
+        shell: pwsh
+        run: |
+          cd CollapseLauncher
+          .\build\CollapseLauncher.exe generatevelopackmetadata
+
+          $version = ((Get-Item .\build\CollapseLauncher.exe).VersionInfo.FileVersion)
+          if ($version.EndsWith(".0")) {
+            $version = $version.Substring(0, $version.Length - 2)
+          }
+
+          echo "VERSION=$version" >> $env:GITHUB_ENV
+          mkdir UnsignedArtifact
+          mkdir "UnsignedArtifact\BuildArtifact-$version"
+          xcopy .\build\ "UnsignedArtifact\BuildArtifact-$version\" /E /K /Y /I
+
+      - name: Upload unsigned artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Collapse-autoUpdate-final
+          path: ./CollapseLauncher/UnsignedArtifact
+          compression-level: 9
+          retention-days: 14

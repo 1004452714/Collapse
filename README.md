@@ -16,6 +16,43 @@
 [![ru](https://img.shields.io/badge/README-ru-red.svg)](Docs/README.localized/README.ru-ru.md)
 [![zh](https://img.shields.io/badge/README-zh-red.svg)](Docs/README.localized/README.zh-cn.md)
 
+# Personal Fork Notice
+这是一个自用 fork 仓库，不是 Collapse Launcher 官方发布仓库。除上游 Collapse Launcher 原有功能外，本 fork 只额外增加了一个命令行启动游戏时自动更新的能力。
+
+上游项目请见：[CollapseLauncher/Collapse](https://github.com/CollapseLauncher/Collapse)
+
+## Command-line auto update and launch
+新增用法基于已有的 `open` 命令：
+
+```powershell
+.\CollapseLauncher.exe open --game "<game name or index>" --region "<region name or index>" --play
+```
+
+可使用短参数：
+
+```powershell
+.\CollapseLauncher.exe open -g "<game name or index>" -r "<region name or index>" -p
+```
+
+参数说明：
+
+- `--game` / `-g`：必填。游戏名称或游戏序号，例如 `0` 或 `"Honkai Impact 3rd"`。
+- `--region` / `-r`：可选。区域名称或区域序号，例如 `0` 或 `"Global"`。
+- `--play` / `-p`：启用自动启动。如果游戏已安装且无需更新，会直接启动；如果游戏需要更新，会先自动下载并安装更新，然后启动游戏。
+
+示例：
+
+```powershell
+.\CollapseLauncher.exe open -g "Genshin Impact" -r "Global" -p
+.\CollapseLauncher.exe open -g 0 -r 0 -p
+```
+
+注意：
+
+- 名称包含空格时需要加引号。
+- 如果游戏未安装或安装状态异常，命令行启动会被跳过。
+- 如果不加 `--play` / `-p`，只会打开启动器并切换到指定游戏/区域，不会自动启动游戏。
+
 **Collapse** was originally designed for **Honkai Impact 3rd**. However, as the project evolved, this launcher is now a game client for all currently released **miHoYo Games** and even external games through its plugin system!
 
 [![Build-Canary](https://github.com/CollapseLauncher/Collapse/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/CollapseLauncher/Collapse/actions/workflows/build.yml)

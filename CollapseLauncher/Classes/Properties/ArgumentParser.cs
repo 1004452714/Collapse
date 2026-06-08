@@ -371,7 +371,7 @@ namespace CollapseLauncher
             var startGameOption = new Option<bool>(OptsKeyPlay)
             {
                 Aliases = { "-p" },
-                Description = "Start Game after loading the Game/Region",
+                Description = "Start Game after loading the Game/Region. If the installed game needs an update, update it first.",
                 Required = false
             };
 

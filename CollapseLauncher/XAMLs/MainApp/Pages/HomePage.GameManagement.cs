@@ -780,9 +780,13 @@ public sealed partial class HomePage
 
     #region Game Update Dialog
     private async void UpdateGameDialog(object sender, RoutedEventArgs e)
+        => await StartGameUpdateRoutine();
+
+    private async Task StartGameUpdateRoutine(bool skipExistingDownloadDialog = false)
     {
-        bool isUseSophon     = CurrentGameProperty.GameInstall?.IsUseSophon ?? false;
-        bool isUseDeltaPatch = CurrentGameProperty.GameVersion?.IsGameHasDeltaPatch() ?? false;
+        bool isUseSophon         = CurrentGameProperty.GameInstall?.IsUseSophon ?? false;
+        bool isUseDeltaPatch     = CurrentGameProperty.GameVersion?.IsGameHasDeltaPatch() ?? false;
+        bool isUseSophonProgress = isUseSophon && !isUseDeltaPatch;
 
         HideImageCarousel(true);
 
@@ -799,7 +803,7 @@ public sealed partial class HomePage
             UpdateGameBtn.Visibility     = Visibility.Collapsed;
             CancelDownloadBtn.Visibility = Visibility.Visible;
 
-            if (isUseSophon && !isUseDeltaPatch)
+            if (isUseSophonProgress)
             {
                 SophonProgressStatusGrid.Visibility             =  Visibility.Visible;
                 CurrentGameProperty.GameInstall.ProgressChanged += GameInstallSophon_ProgressChanged;
@@ -816,7 +820,7 @@ public sealed partial class HomePage
             }
 
             int  verifResult;
-            bool skipDialog = false;
+            bool skipDialog = skipExistingDownloadDialog;
             while ((verifResult = await CurrentGameProperty.GameInstall!.StartPackageVerification()) == 0)
             {
                 await CurrentGameProperty.GameInstall.StartPackageDownload(skipDialog);
@@ -886,9 +890,9 @@ public sealed partial class HomePage
                 CurrentGameProperty.GameInstall.PostInstallBehaviour = PostInstallBehaviour.Nothing;
 
                 CurrentGameProperty.GameInstall.ProgressChanged -=
-                    isUseSophon ? GameInstallSophon_ProgressChanged : GameInstall_ProgressChanged;
+                    isUseSophonProgress ? GameInstallSophon_ProgressChanged : GameInstall_ProgressChanged;
                 CurrentGameProperty.GameInstall.StatusChanged -=
-                    isUseSophon ? GameInstallSophon_StatusChanged : GameInstall_StatusChanged;
+                    isUseSophonProgress ? GameInstallSophon_StatusChanged : GameInstall_StatusChanged;
 
                 await Task.Delay(200);
                 CurrentGameProperty.GameInstall.Flush();

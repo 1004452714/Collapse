@@ -291,32 +291,7 @@ namespace CollapseLauncher.Pages
                 }
 
                 m_arguments.StartGame.Play = false;
-
-                if (CurrentGameProperty.GameInstall?.IsRunning ?? false)
-                {
-                    CurrentGameProperty.GameInstall.PostInstallBehaviour = PostInstallBehaviour.StartGame;
-                    return;
-                }
-
-                switch (gameState)
-                {
-                    case GameInstallStateEnum.InstalledHavePreload:
-                    case GameInstallStateEnum.Installed:
-                        StartGame(null, null);
-                        break;
-                    case GameInstallStateEnum.InstalledHavePlugin:
-                    case GameInstallStateEnum.NeedsUpdate:
-                        CurrentGameProperty.GameInstall?.PostInstallBehaviour = PostInstallBehaviour.StartGame;
-
-                        UpdateGameDialog(null, null);
-                        break;
-                    case GameInstallStateEnum.NotInstalled:
-                    case GameInstallStateEnum.GameBroken:
-                        CurrentGameProperty.GameInstall?.PostInstallBehaviour = PostInstallBehaviour.StartGame;
-
-                        InstallGameDialog(null, null);
-                        break;
-                }
+                await StartGameFromCommandLine(gameState);
             }
             catch (ArgumentNullException ex)
             {
@@ -334,6 +309,44 @@ namespace CollapseLauncher.Pages
                 CurrentBackgroundManager.IsBackgroundElevated = false;
                 CurrentBackgroundManager.ForegroundOpacity    = 1d;
                 CurrentBackgroundManager.SmokeOpacity         = 0d;
+            }
+        }
+
+        private async Task StartGameFromCommandLine(GameInstallStateEnum gameState)
+        {
+            if (CurrentGameProperty.GameInstall?.IsRunning ?? false)
+            {
+                if (gameState is GameInstallStateEnum.NeedsUpdate or GameInstallStateEnum.InstalledHavePlugin)
+                {
+                    CurrentGameProperty.GameInstall.PostInstallBehaviour = PostInstallBehaviour.StartGame;
+                }
+
+                return;
+            }
+
+            switch (gameState)
+            {
+                case GameInstallStateEnum.InstalledHavePreload:
+                case GameInstallStateEnum.Installed:
+                    StartGame(null, null);
+                    break;
+                case GameInstallStateEnum.InstalledHavePlugin:
+                case GameInstallStateEnum.NeedsUpdate:
+                    if (CurrentGameProperty.GameInstall == null)
+                    {
+                        LogWriteLine($"Cannot update game from command line because the installer is unavailable for {CurrentGameProperty.GameVersion?.GamePreset.ZoneFullname}.",
+                                     LogType.Warning, true);
+                        return;
+                    }
+
+                    CurrentGameProperty.GameInstall.PostInstallBehaviour = PostInstallBehaviour.StartGame;
+                    await StartGameUpdateRoutine(true);
+                    break;
+                case GameInstallStateEnum.NotInstalled:
+                case GameInstallStateEnum.GameBroken:
+                    LogWriteLine($"Command-line game start skipped because {CurrentGameProperty.GameVersion?.GamePreset.ZoneFullname} is not installed or is broken.",
+                                 LogType.Warning, true);
+                    break;
             }
         }
 
